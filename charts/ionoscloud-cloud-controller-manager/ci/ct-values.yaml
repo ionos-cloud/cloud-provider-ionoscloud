@@ -1,0 +1,6 @@
+image:
+  tag: v1.2.3
+cloudConfig:
+  token: myJWT
+  datacenters:
+    - 3186f3bd-ef0c-46d2-80d0-98f036a88653

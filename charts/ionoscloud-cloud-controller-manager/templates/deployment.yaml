@@ -1,0 +1,119 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ionoscloud-ccm.name" . }}
+  labels:
+    {{- include "ionoscloud-ccm.labels" . | nindent 4 }}
+{{- with .Values.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "ionoscloud-ccm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "ionoscloud-ccm.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "ionoscloud-ccm.name" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ required "image.tag is required" .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          args:
+            - --cloud-provider=ionos
+            - --v={{ .Values.ccm.klogLevel }}
+            - --feature-gates=StableLoadBalancerNodeSet=false
+            - --concurrent-service-syncs={{ .Values.ccm.concurrentServiceSyncs }}
+            # NOTE(piepmatz): The default of 5s can lead to hitting the IONOS Cloud API rate limit if multiple nodes are
+            # NotReady, so we increase the value a bit to decrease the risk. However, this is no guarantee that we won't
+            # hit the limit.
+            - --node-monitor-period=20s
+            - --leader-elect={{ gt (int .Values.replicaCount) 1 }}
+            - --cluster-id={{ .Values.ccm.clusterName }}
+            - --private={{ .Values.ccm.private }}
+            {{- include "ionoscloud-ccm.extraArgs" .Values.ccm.extraArgs | indent 12 }}
+          {{- if .Values.metrics.enabled }}
+            - "--metrics-endpoint=0.0.0.0:{{ .Values.metrics.port }}"
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /etc/ie-csi/clouds
+              name: cloud-config-dir
+              readOnly: true
+          {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.ccm.terminationGracePeriodSeconds }}
+      volumes:
+        - name: cloud-config-dir
+          secret:
+            secretName: {{ include "ionoscloud-ccm.name" . }}-cloud-config
+      {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: topology.kubernetes.io/region
+              labelSelector:
+                matchLabels:
+                  {{- include "ionoscloud-ccm.selectorLabels" . | nindent 18 }}
+      {{- with .Values.affinity.podAffinity }}
+        podAffinity:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.affinity.nodeAffinity }}
+        nodeAffinity:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+      tolerations:
+        # This taint is set by kubelet running with `--cloud-provider=external`.
+        # So we must tolerate it to bootstrap the CCM.
+        - key: "node.cloudprovider.kubernetes.io/uninitialized"
+          value: "true"
+          effect: "NoSchedule"
+        - effect: NoSchedule
+          key: node.kubernetes.io/not-ready
+          operator: Exists
+        - effect: NoSchedule
+          key: node.kubernetes.io/unreachable
+          operator: Exists
+        # This taint is required to run the CCM on the control plane nodes, e.g. in cluster-api based clusters.
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+      {{- with .Values.tolerations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

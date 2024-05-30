@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+name: ionoscloud-cloud-controller-manager
+description: Installs Cloud Controller Manager for IONOS Cloud
+version: 0.1.0
+maintainers:
+  - name: piepmatz
+    url: https://github.com/piepmatz

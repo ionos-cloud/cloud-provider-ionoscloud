@@ -1,0 +1,22 @@
+---
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "ionoscloud-ccm.name" . }}
+  labels:
+    {{- include "ionoscloud-ccm.labels" . | nindent 4 }}
+  {{- if .Values.metrics.additionalLabels }}
+    {{ toYaml .Values.metrics.additionalLabels | indent 4 }}
+  {{- end }}
+spec:
+  podMetricsEndpoints:
+    - port: metrics
+      interval: {{ .Values.metrics.scrapeInterval }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "ionoscloud-ccm.selectorLabels" . | nindent 6 }}
+{{- end }}

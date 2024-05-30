@@ -1,0 +1,91 @@
+# Default values for ionoscloud-cloud-controller-manager.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ionos-cloud/ionoscloud-cloud-controller-manager
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 30Mi
+  limits:
+    cpu: 50m
+    memory: 150Mi
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+# Only podAffinity and nodeAffinity are rendered.
+affinity: {}
+
+ccm:
+  # clusterName must be a unique identifier of the K8s cluster the CCM is running in.
+  # It is used in names of automatically reserved IP blocks for load balancers.
+  clusterName: k8s
+  # whether the cluster is private, i.e. whether its nodes have no public IPs
+  private: false
+  # The CCM uses klog for logging. It has several INFO sublevels:
+  # https://github.com/kubernetes/community/blob/9cfd840e1cd9376f562662dfe8135d3042a1e4cd/contributors/devel/sig-instrumentation/logging.md
+  klogLevel: 3
+  # number of services that are allowed to sync concurrently.
+  # Larger number = more responsive service management = more responsive load balancer management
+  concurrentServiceSyncs: 3
+  terminationGracePeriodSeconds: 120
+  # Additional command-line arguments
+  extraArgs: {}
+
+# It is intended to be used for installing ionoscloud-cloud-controller-manager to cluster-api based clusters.
+cloudConfig:
+  # REMEMBER: IONOS tokens have a TTL and must be refreshed.
+  token: ""
+  # A list of datacenter IDs. Every datacenter containing nodes must be given here.
+  datacenters: []
+
+# Additional labels to add to the deployment
+additionalLabels: {}
+
+metrics:
+  # If true, enables metrics scraping.
+  enabled: false
+  # How often to scrape.
+  scrapeInterval: 30s
+  # Additional labels to add to the PodMonitor.
+  additionalLabels: {}
+  # Metrics Port
+  port: 9100

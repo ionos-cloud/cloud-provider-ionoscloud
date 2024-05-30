@@ -1,0 +1,50 @@
+name: Chart CI
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - .github/workflows/chart-ci.yml
+
+jobs:
+  helm-lint-test:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    env:
+      CT_TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+      CT_GITHUB_GROUPS: "true"
+      CT_USE_HELMIGNORE: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.2.0
+
+      - name: Set up python
+        uses: actions/setup-python@v5.1.0
+        with:
+          python-version: '3.x'
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (lint)
+        run: ct lint
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.10.0
+
+      - name: Install required CRDs
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
+
+      # TODO(jriedel-ionos): Install chart using ct once packages are available
+      - name: Install helm chart (dry-run)
+        run: >
+          helm install ionoscloud-cloud-controller-manager $CHART -n kube-system -f $CHART/ci/ct-values.yaml --dry-run -o json | jq -r '.manifest' |
+          kubectl apply --dry-run=server --validate=true -f -
+        env:
+          CHART: ./charts/ionoscloud-cloud-controller-manager
