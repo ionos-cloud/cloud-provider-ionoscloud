@@ -1,4 +1,4 @@
-{{- if eq .Values.cloudConfig.externalSecret "" -}}
+{{- if empty .Values.cloudConfig.externalSecret -}}
 {{- $_ := .Values.cloudConfig.token | required "Secret creation requires the token to be defined" -}}
 {{- $_ = .Values.cloudConfig.datacenters | required "Secret creations requires at least one datacenter to be defined" -}}
 {{- if .Values.cloudConfig.datacenters | len | eq 0 -}}{{ fail "Secret requires at least one datacenter to be defined" }}{{- end -}}
