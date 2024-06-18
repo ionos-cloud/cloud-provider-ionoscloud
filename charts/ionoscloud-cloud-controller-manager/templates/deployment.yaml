@@ -75,7 +75,11 @@ spec:
       volumes:
         - name: cloud-config-dir
           secret:
+          {{- if .Values.cloudConfig.externalSecret }}
+            secretName: {{ .Values.cloudConfig.externalSecret }}
+          {{- else }}
             secretName: {{ include "ionoscloud-ccm.name" . }}-cloud-config
+          {{- end }}
       {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
