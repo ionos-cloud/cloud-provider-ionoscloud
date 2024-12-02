@@ -72,6 +72,9 @@ ccm:
 
 # It is intended to be used for installing ionoscloud-cloud-controller-manager to cluster-api based clusters.
 cloudConfig:
+  # Set externalSecret to the name of an externally managed secret if you do not want the helm chart to create the cloud-config secret.
+  # Either externalSecret or token and datacenters must be specified.
+  externalSecret: ""
   # REMEMBER: IONOS tokens have a TTL and must be refreshed.
   token: ""
   # A list of datacenter IDs. Every datacenter containing nodes must be given here.
